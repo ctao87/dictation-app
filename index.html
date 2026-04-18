@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>单词听写</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>单词听写</h1>
+            <p class="subtitle">Word Dictation</p>
+        </header>
+
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="input">录入单词</button>
+            <button class="tab-btn" data-tab="batches">批次浏览</button>
+            <button class="tab-btn" data-tab="dictation">开始听写</button>
+        </nav>
+
+        <!-- 录入单词页面 -->
+        <section id="input-tab" class="tab-content active">
+            <div class="card">
+                <h2>录入单词 <span id="batch-indicator" class="batch-badge">批次 #1</span></h2>
+                <p class="hint">每行一个单词，支持复制粘贴，自动获取中文释义</p>
+                <textarea id="word-input" placeholder="apple&#10;banana&#10;orange&#10;..." rows="8"></textarea>
+                <button id="add-words-btn" class="btn btn-primary btn-block">确认录入</button>
+            </div>
+
+            <div class="card" id="preview-card" style="display:none">
+                <h2>录入预览</h2>
+                <div id="preview-list" class="preview-list"></div>
+                <div class="btn-group">
+                    <button id="confirm-batch-btn" class="btn btn-primary">确认添加</button>
+                    <button id="cancel-batch-btn" class="btn btn-secondary">取消</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>数据管理</h2>
+                <p class="hint">数据自动保存，下次打开继续使用</p>
+                <div class="btn-group">
+                    <button id="import-btn" class="btn btn-secondary">导入数据</button>
+                    <button id="export-btn" class="btn btn-secondary">导出数据</button>
+                    <button id="clear-btn" class="btn btn-danger">清空全部</button>
+                </div>
+                <input type="file" id="import-file" accept=".json" style="display:none">
+            </div>
+        </section>
+
+        <!-- 批次浏览页面 -->
+        <section id="batches-tab" class="tab-content">
+            <div class="list-header">
+                <span id="batch-count">共 0 个批次</span>
+                <span id="total-words-count">0 个单词</span>
+            </div>
+            <div id="batch-list" class="batch-list"></div>
+
+            <!-- 单词详情弹窗 -->
+            <div id="word-modal" class="modal" style="display:none">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <span id="modal-batch-info" class="batch-badge"></span>
+                        <button id="close-modal-btn" class="btn-close">&times;</button>
+                    </div>
+                    <div class="word-detail">
+                        <div class="word-text" id="modal-word"></div>
+                        <div class="speak-options">
+                            <button id="modal-speak-us-btn" class="btn-speak active">🇺🇸 美式</button>
+                            <button id="modal-speak-uk-btn" class="btn-speak">🇬🇧 英式</button>
+                        </div>
+                        <div class="word-phonetic" id="modal-phonetic"></div>
+                        <div class="word-meaning" id="modal-meaning"></div>
+                    </div>
+                    <div class="modal-actions">
+                        <button id="modal-delete-btn" class="btn btn-danger btn-sm">删除此单词</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 听写页面 -->
+        <section id="dictation-tab" class="tab-content">
+            <div id="dictation-setup" class="dictation-setup">
+                <div class="card">
+                    <h2>听写设置</h2>
+                    <div class="setting-item">
+                        <label>输入批次序号</label>
+                        <p class="hint">用逗号、顿号或空格分隔，如：1、2、3 或 1,2,3</p>
+                        <input type="text" id="batch-numbers" placeholder="例如：1、3、5 或 1,3,5">
+                    </div>
+                    <div id="available-batches" class="available-batches">
+                        <p class="hint">当前可用批次：</p>
+                        <div id="batch-tags"></div>
+                    </div>
+                    <div id="selected-batches" class="selected-batches"></div>
+                    <div class="setting-item">
+                        <label>发音风格</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="accent" value="US" checked>
+                                <span>🇺🇸 美式发音</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="accent" value="UK">
+                                <span>🇬🇧 英式发音</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>朗读次数</label>
+                        <select id="repeat-count">
+                            <option value="2">2次</option>
+                            <option value="3" selected>3次</option>
+                            <option value="4">4次</option>
+                            <option value="5">5次</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>发音语速</label>
+                        <input type="range" id="speech-rate" min="0.5" max="1.5" step="0.1" value="0.85">
+                        <span id="rate-value">0.85x</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>朗读间隔</label>
+                        <div class="interval-settings">
+                            <div class="interval-item">
+                                <span>短单词(≤5字母)</span>
+                                <input type="number" id="short-interval" value="5" min="3" max="30">
+                                <span>秒</span>
+                            </div>
+                            <div class="interval-item">
+                                <span>长单词(>5字母)</span>
+                                <input type="number" id="long-interval" value="10" min="5" max="60">
+                                <span>秒</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>朗读顺序</label>
+                        <select id="play-order">
+                            <option value="batch">按批次顺序</option>
+                            <option value="random">随机打乱</option>
+                        </select>
+                    </div>
+                    <button id="start-dictation-btn" class="btn btn-primary btn-block btn-large">开始听写</button>
+                </div>
+            </div>
+
+            <div id="dictation-progress" class="dictation-progress" style="display:none">
+                <div class="progress-header">
+                    <span id="current-index">1</span> / <span id="total-count">0</span>
+                    <span id="current-batch" class="batch-badge"></span>
+                </div>
+                <div class="word-display" id="word-display">
+                    <div class="word-reading">正在朗读...</div>
+                </div>
+                <div class="repeat-indicator">
+                    <span id="repeat-progress">朗读第 1 次</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <div class="dictation-controls">
+                    <button id="pause-btn" class="btn btn-secondary">暂停</button>
+                    <button id="stop-dictation-btn" class="btn btn-danger">停止听写</button>
+                </div>
+            </div>
+
+            <div id="dictation-result" class="dictation-result" style="display:none">
+                <h2>听写完成</h2>
+                <p class="hint">以下是本次听写的所有单词，请核对</p>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="total-words">0</span>
+                        <span class="stat-label">总计</span>
+                    </div>
+                </div>
+                <div id="result-list" class="result-list"></div>
+                <div class="result-actions">
+                    <button id="speak-all-btn" class="btn btn-secondary btn-block">朗读全部答案</button>
+                    <button id="restart-btn" class="btn btn-primary btn-block">重新听写</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
